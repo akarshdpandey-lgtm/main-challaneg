@@ -1,0 +1,19 @@
+{
+  "name": "destination-discovery-monorepo",
+  "version": "1.0.0",
+  "description": "Cultural Destination Discovery & Travel Planner Monorepo",
+  "main": "server/server.js",
+  "scripts": {
+    "install:server": "npm --prefix server install",
+    "install:client": "npm --prefix client install",
+    "install-all": "npm install && npm run install:server && npm run install:client",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:client": "npm --prefix client run build",
+    "start:server": "npm --prefix server start"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

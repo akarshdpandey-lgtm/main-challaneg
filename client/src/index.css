@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Premium Design Tokens and Core Variables */
+@theme {
+  --color-brand-obsidian: #030712;
+  --color-brand-violet: #8b5cf6;
+  --color-brand-indigo: #6366f1;
+  --color-brand-cyan: #06b6d4;
+  --color-brand-pink: #f43f5e;
+  
+  /* Mockup Visual Palette */
+  --color-brand-gold: #dfb14c;
+  --color-brand-gold-hover: #d6a53b;
+  --font-serif: 'Playfair Display', Georgia, serif;
+}
+
+:root {
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #0c0f17; /* Deep Obsidian dark navy */
+  color: #f3f4f6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Panel styles */
+.glass-panel {
+  background: rgba(10, 15, 30, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(10, 15, 30, 0.8);
+  border-color: rgba(223, 177, 76, 0.3); /* Gold tint on hover */
+  box-shadow: 
+    0 10px 40px -10px rgba(223, 177, 76, 0.1),
+    0 0 0 1px rgba(223, 177, 76, 0.2);
+  transform: translateY(-4px);
+}
+
+/* Text & Accent Gradient */
+.text-gradient {
+  background: linear-gradient(135deg, #fef08a 0%, #fde047 30%, #dfb14c 60%, #eab308 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Spinner */
+.animate-spin-slow {
+  animation: spin 15s linear infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0c0f17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(223, 177, 76, 0.4);
+}
+
+.glow-input {
+  transition: all 0.3s ease;
+}
+
+.glow-input:focus {
+  border-color: rgba(223, 177, 76, 0.5) !important;
+  box-shadow: 0 0 15px rgba(223, 177, 76, 0.2) !important;
+}
+
+/* Leaflet Overrides */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #0c0f17 !important;
+  border-radius: 1.25rem;
+}
