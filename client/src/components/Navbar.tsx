@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Sparkles, MapPin, Menu, X } from 'lucide-react';
+import { Compass, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const location = useLocation();
@@ -13,7 +13,7 @@ export default function Navbar() {
       .then(data => {
         setApiStatus({
           online: data.status === 'ok',
-          gemini: data.geminiKeySet
+          gemini: !!data.geminiKeySet
         });
       })
       .catch(() => {
@@ -21,7 +21,7 @@ export default function Navbar() {
       });
   }, [location.pathname]);
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <nav className="absolute top-0 left-0 w-full z-50 bg-transparent py-6 px-6 md:px-12 flex justify-between items-center">

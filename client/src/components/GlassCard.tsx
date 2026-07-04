@@ -1,6 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
+interface GlassCardProps {
+  children: React.ReactNode;
+  className?: string;
+  animate?: boolean;
+  delay?: number;
+  hoverable?: boolean;
+  onClick?: ((event: React.MouseEvent<HTMLDivElement>) => void) | null;
+  id?: string;
+}
+
 export default function GlassCard({ 
   children, 
   className = '', 
@@ -9,7 +19,7 @@ export default function GlassCard({
   hoverable = false,
   onClick = null,
   id = ''
-}) {
+}: GlassCardProps) {
   const baseClasses = `glass-panel rounded-2xl p-6 ${hoverable ? 'glass-panel-hover transition-all duration-300' : ''} ${className}`;
   
   if (!animate) {
@@ -17,7 +27,7 @@ export default function GlassCard({
       <div 
         id={id}
         className={baseClasses} 
-        onClick={onClick}
+        onClick={onClick as any}
         style={{ cursor: onClick ? 'pointer' : 'default' }}
       >
         {children}
@@ -32,7 +42,7 @@ export default function GlassCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut', delay }}
       className={baseClasses}
-      onClick={onClick}
+      onClick={onClick as any}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       {children}

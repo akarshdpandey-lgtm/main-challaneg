@@ -3,24 +3,131 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Compass, Landmark, Heart, Calendar, Clock, MapPin, 
-  Share2, Printer, BookOpen, Volume2, VolumeX, ArrowLeft, X 
+  Share2, Printer, BookOpen, Volume2, VolumeX, ArrowLeft, X,
+  ExternalLink, Sparkles, Map, Check
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import MapContainer from '../components/MapContainer';
 
+interface Activity {
+  timeOfDay: string;
+  name: string;
+  type: string;
+  duration: string;
+  travelTime?: string;
+  cost: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  transitInfo?: string;
+}
+
+interface DayPlan {
+  day: number;
+  theme: string;
+  activities: Activity[];
+}
+
+interface HeritageSite {
+  name: string;
+  description: string;
+  history: string;
+  preservationInfo: string;
+  artisanRecommendation: string;
+  latitude: number;
+  longitude: number;
+  tips?: string;
+}
+
+interface FoodItem {
+  name: string;
+  description: string;
+  whereToTry: string;
+  dietaryNotes?: string;
+}
+
+interface MarketItem {
+  name: string;
+  description: string;
+  whatToBuy: string;
+  hours: string;
+}
+
+interface WorkshopItem {
+  name: string;
+  description: string;
+  bookingTip: string;
+}
+
+interface PerformanceItem {
+  name: string;
+  description: string;
+  culturalSignificance: string;
+}
+
+interface LocalExperiences {
+  traditionalFoods: FoodItem[];
+  localMarkets: MarketItem[];
+  workshops: WorkshopItem[];
+  musicAndDance: PerformanceItem[];
+}
+
+interface EventItem {
+  name: string;
+  dateRange: string;
+  description: string;
+  culturalSignificance: string;
+}
+
+interface StoryMode {
+  title: string;
+  story: string;
+  historicalContext: string;
+  localLegend: string;
+  significance: string;
+}
+
+interface DestinationInfo {
+  name: string;
+  summary: string;
+  history: string;
+  bestTimeToVisit: string;
+  currency: string;
+  localLanguage: string;
+  safetyTips: string;
+  culturalDos: string[];
+  culturalDonts: string[];
+}
+
+interface TravelPlan {
+  destinationInfo: DestinationInfo;
+  culturalStory: StoryMode;
+  heritageSites: HeritageSite[];
+  localExperiences: LocalExperiences;
+  localEvents: EventItem[];
+  itinerary: DayPlan[];
+  hiddenGems: {
+    name: string;
+    description: string;
+    latitude: number;
+    longitude: number;
+    whySpecial: string;
+  }[];
+}
+
 export default function Dashboard() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [plan, setPlan] = useState(null);
-  const [activeTab, setActiveTab] = useState('itinerary'); // Default to Itinerary tab as shown in mockup
-  const [showStoryModal, setShowStoryModal] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const synthRef = useRef(window.speechSynthesis);
-  const utteranceRef = useRef(null);
+  const [plan, setPlan] = useState<TravelPlan | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('itinerary');
+  const [showStoryModal, setShowStoryModal] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const synthRef = useRef<SpeechSynthesis | null>(window.speechSynthesis);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Load plan
+  // Load plan from location state or cache
   useEffect(() => {
     const statePlan = location.state?.plan;
     const localPlan = localStorage.getItem('currentPlan');
@@ -36,22 +143,13 @@ export default function Dashboard() {
     }
   }, [location.state]);
 
-  // Clean up audio
-  useEffect(() => {
-    return () => {
-      if (synthRef.current) {
-        synthRef.current.cancel();
-      }
-    };
-  }, []);
-
   if (!plan) {
     return (
       <div className="max-w-md mx-auto px-6 pt-32 pb-16 text-center space-y-6">
         <GlassCard className="card-glow">
-          <h2 className="text-xl font-bold text-white">No Journey Active</h2>
+          <h2 className="text-xl font-bold text-white font-serif">No Journey Active</h2>
           <p className="text-gray-400 text-sm mt-2 leading-relaxed">
-            Specify your destination specs to generate a cultural itinerary.
+            Specify your destination details to curating a journey profile.
           </p>
           <button 
             onClick={() => navigate('/planner')}
@@ -66,12 +164,11 @@ export default function Dashboard() {
 
   const { destinationInfo, culturalStory, heritageSites, localExperiences, localEvents, itinerary, hiddenGems } = plan;
 
-  // Flatten all activities for attractions view
-  const allAttractions = itinerary.reduce((acc, day) => {
+  // Flatten all activities
+  const allAttractions = itinerary.reduce((acc: any[], day) => {
     return [...acc, ...day.activities.map(act => ({ ...act, day: day.day }))];
   }, []);
 
-  // Set up markers for Map tab
   const allMarkers = [
     ...allAttractions.map(act => ({
       name: act.name,
@@ -92,11 +189,10 @@ export default function Dashboard() {
     }))
   ];
 
-  // Route paths
   const allRouteCoords = allAttractions.map(act => [act.latitude, act.longitude]);
   const defaultCenter = allRouteCoords.length > 0 ? allRouteCoords[0] : [35.0116, 135.7681];
 
-  // TTS Narrator functions
+  // Speech TTS Reader
   const speakStory = () => {
     if (!synthRef.current) return;
 
@@ -140,7 +236,6 @@ export default function Dashboard() {
     }
   };
 
-  // Copy share links
   const copyShareableLink = () => {
     try {
       const stringified = JSON.stringify(plan);
@@ -155,16 +250,21 @@ export default function Dashboard() {
     }
   };
 
+  const openGoogleMapsDirections = (lat: number, lng: number) => {
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(directionsUrl, '_blank');
+  };
+
   return (
-    <div className="w-full min-h-screen bg-[#0c0f17] text-gray-100 relative">
+    <div className="w-full min-h-screen bg-[#0B0D12] text-gray-100 relative">
       
-      {/* Dynamic Background visual glows */}
+      {/* Background radial glows */}
       <div className="absolute top-0 right-0 w-[40%] h-[35%] bg-violet-900/5 rounded-full blur-[150px] pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-[40%] h-[35%] bg-brand-gold/5 rounded-full blur-[150px] pointer-events-none"></div>
 
       <div className="w-full max-w-7xl mx-auto px-6 md:px-12 pt-32 pb-20 space-y-10">
         
-        {/* Voyager Header Area */}
+        {/* Header section with back option */}
         <div className="space-y-6">
           <button 
             onClick={() => navigate('/planner')}
@@ -175,11 +275,9 @@ export default function Dashboard() {
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-            
-            {/* Title & Description Left Column */}
+            {/* Title Summary Left Column */}
             <div className="lg:col-span-8 space-y-3">
               <span className="text-[10px] font-bold font-mono tracking-[0.2em] text-brand-gold uppercase">Your Journey</span>
-              {/* Lowercase Title in Serif typeface matching mockup */}
               <h1 className="text-5xl md:text-6xl font-serif font-normal text-white lowercase leading-none tracking-tight">
                 {destinationInfo.name.split(',')[0]}
               </h1>
@@ -188,7 +286,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {/* CTA action keys on Right Column */}
+            {/* Print, share, and story mode triggers */}
             <div className="lg:col-span-4 flex flex-wrap gap-3 lg:justify-end pb-1 relative z-10">
               <button 
                 onClick={() => setShowStoryModal(true)}
@@ -202,7 +300,7 @@ export default function Dashboard() {
                 onClick={copyShareableLink}
                 className="px-5 py-2.5 rounded-sm border border-white/10 hover:border-brand-gold/40 bg-slate-900/35 hover:bg-white/5 text-white text-xs font-bold uppercase tracking-wider flex items-center space-x-2 transition-all duration-300 shadow"
               >
-                <Share2 className="h-4 w-4 text-brand-gold shrink-0" />
+                {copiedLink ? <Check className="h-4 w-4 text-emerald-400 shrink-0" /> : <Share2 className="h-4 w-4 text-brand-gold shrink-0" />}
                 <span>{copiedLink ? 'Copied' : 'Share'}</span>
               </button>
 
@@ -217,7 +315,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tab Submenu matching mockup */}
+        {/* Dynamic segmented tabs */}
         <div className="flex overflow-x-auto space-x-2 border-b border-white/5 pb-3">
           {[
             { id: 'attractions', name: 'Attractions', icon: Compass },
@@ -233,9 +331,9 @@ export default function Dashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center space-x-2 transition-all duration-300 shrink-0 ${
+                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center space-x-2 transition-all duration-300 shrink-0 cursor-pointer ${
                   isTabActive 
-                    ? 'bg-brand-gold text-slate-950 shadow' 
+                    ? 'bg-brand-gold text-slate-950 shadow font-extrabold' 
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -246,136 +344,93 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Dynamic content rendering grid views */}
+        {/* Tab content panels */}
         <div className="w-full">
           <AnimatePresence mode="wait">
             
-            {/* Attractions tab */}
+            {/* Attractions view */}
             {activeTab === 'attractions' && (
               <motion.div 
                 key="attractions"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               >
-                {allAttractions.map((act, idx) => (
-                  <div key={idx} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-brand-gold/20 transition-all duration-300">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Attraction</span>
-                        <span className="text-[9px] font-mono text-gray-500">Day {act.day}</span>
+                {allAttractions.map((act, idx) => {
+                  const isHiddenGem = hiddenGems.some(gem => gem.name.toLowerCase().includes(act.name.toLowerCase()) || act.name.toLowerCase().includes(gem.name.toLowerCase()));
+                  return (
+                    <div key={idx} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-brand-gold/20 transition-all duration-300 relative group">
+                      
+                      {/* Image placeholder utilizing premium local skyline mockup background */}
+                      <div className="h-40 rounded-xl bg-slate-950 border border-white/5 mb-4 relative overflow-hidden flex items-center justify-center">
+                        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:12px_12px]"></div>
+                        <Compass className="h-10 w-10 text-brand-gold/10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500" />
+                        
+                        {/* Tags list */}
+                        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+                          <span className="text-[8px] font-bold font-mono tracking-widest text-brand-gold bg-slate-950/80 px-2 py-0.5 border border-brand-gold/20 rounded-full uppercase">Day {act.day}</span>
+                          {isHiddenGem && (
+                            <span className="text-[8px] font-bold font-mono tracking-widest text-pink-400 bg-slate-950/80 px-2 py-0.5 border border-pink-500/20 rounded-full uppercase">Hidden Gem</span>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="font-serif text-lg font-normal text-white mt-1">{act.name}</h3>
-                      <p className="text-gray-400 text-xs leading-relaxed">{act.description}</p>
+
+                      <div className="space-y-2 mb-4">
+                        <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Attraction</span>
+                        <h3 className="font-serif text-lg font-normal text-white">{act.name}</h3>
+                        <p className="text-gray-400 text-xs leading-relaxed line-clamp-3">{act.description}</p>
+                      </div>
+
+                      <div className="border-t border-white/5 pt-4 flex flex-col space-y-3">
+                        <div className="flex items-center justify-between text-[10px] text-gray-500 font-mono">
+                          <span>Cost: {act.cost}</span>
+                          <span>Time: {act.duration}</span>
+                        </div>
+                        <button
+                          onClick={() => openGoogleMapsDirections(act.latitude, act.longitude)}
+                          className="w-full py-2 rounded border border-white/10 hover:border-brand-gold/40 text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:text-white flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span>Open in Maps</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="border-t border-white/5 pt-4 mt-4 flex items-center justify-between text-[10px] text-gray-500">
-                      <span>Duration: {act.duration}</span>
-                      {act.cost && <span>Cost: {act.cost}</span>}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </motion.div>
             )}
 
-            {/* Heritage Sites Tab */}
+            {/* Heritage Sites timeline layout */}
             {activeTab === 'heritage' && (
               <motion.div 
                 key="heritage"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6"
               >
-                {heritageSites.map((site, idx) => (
-                  <div key={idx} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl space-y-4 hover:border-brand-gold/20 transition-all duration-300">
-                    <div className="space-y-1.5">
-                      <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Heritage</span>
-                      <h3 className="font-serif text-lg font-normal text-white">{site.name}</h3>
-                      <p className="text-gray-400 text-xs leading-relaxed">{site.description}</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-4 border-t border-white/5">
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-brand-gold text-[10px] font-mono uppercase tracking-wider">Preservation</h4>
-                        <p className="text-gray-400 leading-relaxed text-[11px]">{site.preservationInfo}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {heritageSites.map((site, idx) => (
+                    <div key={idx} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl space-y-4 hover:border-brand-gold/20 transition-all duration-300">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">UNESCO Heritage Site</span>
+                          <span className="text-[9px] font-mono text-gray-500">Lat: {site.latitude} | Lng: {site.longitude}</span>
+                        </div>
+                        <h3 className="font-serif text-lg font-normal text-white">{site.name}</h3>
+                        <p className="text-gray-400 text-xs leading-relaxed">{site.description}</p>
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-brand-gold text-[10px] font-mono uppercase tracking-wider">Artisan Recommendation</h4>
-                        <p className="text-gray-400 leading-relaxed text-[11px]">{site.artisanRecommendation}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-
-            {/* Experiences Tab matching Image 2 */}
-            {activeTab === 'experiences' && (
-              <motion.div 
-                key="experiences"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-8"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* traditional foods */}
-                  {localExperiences.traditionalFoods.map((food, idx) => (
-                    <div key={`food-${idx}`} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Food</span>
-                        <h3 className="font-serif text-lg font-normal text-white mt-1">{food.name}</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed">{food.description}</p>
-                      </div>
-                      <div className="border-t border-white/5 pt-3 mt-4 text-[10px] text-gray-500 flex flex-col gap-0.5">
-                        <span><strong>Try at:</strong> {food.whereToTry}</span>
-                        {food.dietaryNotes && <span className="text-brand-gold">{food.dietaryNotes}</span>}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* local markets */}
-                  {localExperiences.localMarkets.map((market, idx) => (
-                    <div key={`market-${idx}`} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Market</span>
-                        <h3 className="font-serif text-lg font-normal text-white mt-1">{market.name}</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed">{market.description}</p>
-                      </div>
-                      <div className="border-t border-white/5 pt-3 mt-4 text-[10px] text-gray-500 flex flex-col gap-0.5">
-                        <span><strong>Buy:</strong> {market.whatToBuy}</span>
-                        <span><strong>Hours:</strong> {market.hours}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* workshops */}
-                  {localExperiences.workshops.map((shop, idx) => (
-                    <div key={`shop-${idx}`} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Workshop</span>
-                        <h3 className="font-serif text-lg font-normal text-white mt-1">{shop.name}</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed">{shop.description}</p>
-                      </div>
-                      <div className="border-t border-white/5 pt-3 mt-4 text-[10px] text-gray-500">
-                        <span className="text-cyan-400 bg-cyan-500/5 px-2 py-0.5 border border-cyan-500/10 rounded">
-                          Tip: {shop.bookingTip}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* music & dance */}
-                  {localExperiences.musicAndDance.map((art, idx) => (
-                    <div key={`art-${idx}`} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Arts</span>
-                        <h3 className="font-serif text-lg font-normal text-white mt-1">{art.name}</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed">{art.description}</p>
-                      </div>
-                      <div className="border-t border-white/5 pt-3 mt-4 text-[10px] text-gray-500">
-                        <span className="text-brand-gold">Significance: {art.culturalSignificance}</span>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-4 border-t border-white/5">
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-brand-gold text-[10px] font-mono uppercase tracking-wider">Preservation ethos</h4>
+                          <p className="text-gray-400 leading-relaxed text-[11px]">{site.preservationInfo}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-brand-gold text-[10px] font-mono uppercase tracking-wider">Nearby Artisan Curation</h4>
+                          <p className="text-gray-400 leading-relaxed text-[11px]">{site.artisanRecommendation}</p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -383,17 +438,88 @@ export default function Dashboard() {
               </motion.div>
             )}
 
-            {/* Events Tab matching Image 3 */}
+            {/* Local Experiences Tab */}
+            {activeTab === 'experiences' && (
+              <motion.div 
+                key="experiences"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {/* Traditional foods */}
+                {localExperiences.traditionalFoods.map((food, idx) => (
+                  <div key={`food-${idx}`} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Food Specialty</span>
+                      <h3 className="font-serif text-lg font-normal text-white mt-1">{food.name}</h3>
+                      <p className="text-gray-400 text-xs leading-relaxed">{food.description}</p>
+                    </div>
+                    <div className="border-t border-white/5 pt-3.5 mt-4 text-[10px] text-gray-500 flex flex-col gap-0.5">
+                      <span><strong>Best Area:</strong> {food.whereToTry}</span>
+                      {food.dietaryNotes && <span className="text-brand-gold mt-1">Note: {food.dietaryNotes}</span>}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Markets */}
+                {localExperiences.localMarkets.map((market, idx) => (
+                  <div key={`market-${idx}`} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Artisan Market</span>
+                      <h3 className="font-serif text-lg font-normal text-white mt-1">{market.name}</h3>
+                      <p className="text-gray-400 text-xs leading-relaxed">{market.description}</p>
+                    </div>
+                    <div className="border-t border-white/5 pt-3.5 mt-4 text-[10px] text-gray-500 flex flex-col gap-0.5">
+                      <span><strong>Buy:</strong> {market.whatToBuy}</span>
+                      <span><strong>Hours:</strong> {market.hours}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Workshops */}
+                {localExperiences.workshops.map((shop, idx) => (
+                  <div key={`shop-${idx}`} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Craft Workshop</span>
+                      <h3 className="font-serif text-lg font-normal text-white mt-1">{shop.name}</h3>
+                      <p className="text-gray-400 text-xs leading-relaxed">{shop.description}</p>
+                    </div>
+                    <div className="border-t border-white/5 pt-3.5 mt-4 text-[10px] text-gray-500">
+                      <span className="inline-block text-[9px] text-cyan-400 bg-cyan-500/5 px-2 py-0.5 border border-cyan-500/10 rounded">
+                        Booking: {shop.bookingTip}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Music and arts */}
+                {localExperiences.musicAndDance.map((art, idx) => (
+                  <div key={`art-${idx}`} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl hover:border-brand-gold/20 transition-all duration-300 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold font-mono tracking-widest text-brand-gold uppercase">Performance</span>
+                      <h3 className="font-serif text-lg font-normal text-white mt-1">{art.name}</h3>
+                      <p className="text-gray-400 text-xs leading-relaxed">{art.description}</p>
+                    </div>
+                    <div className="border-t border-white/5 pt-3.5 mt-4 text-[10px] text-gray-500">
+                      <span className="text-brand-gold leading-relaxed">Etiquette: {art.culturalSignificance}</span>
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+
+            {/* Events view */}
             {activeTab === 'events' && (
               <motion.div 
                 key="events"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 className="grid grid-cols-1 md:grid-cols-2 gap-6"
               >
                 {localEvents.map((ev, idx) => (
-                  <div key={idx} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-brand-gold/20 transition-all duration-300 relative overflow-hidden">
+                  <div key={idx} className="bg-slate-900/35 border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-brand-gold/20 transition-all duration-300 relative overflow-hidden">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start gap-4">
                         <h3 className="font-serif text-lg font-normal text-white">{ev.name}</h3>
@@ -405,26 +531,25 @@ export default function Dashboard() {
                       <p className="text-gray-400 text-xs leading-relaxed">{ev.description}</p>
                     </div>
                     <div className="border-t border-white/5 pt-3.5 mt-4 text-[10px] text-gray-500">
-                      <strong>Ritual detail:</strong> {ev.culturalSignificance}
+                      <strong>Tradition significance:</strong> {ev.culturalSignificance}
                     </div>
                   </div>
                 ))}
               </motion.div>
             )}
 
-            {/* Itinerary Tab matching Image 4 & 5 (split view) */}
+            {/* Itinerary Tab (2-column timeline and map split) */}
             {activeTab === 'itinerary' && (
               <motion.div 
                 key="itinerary"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
               >
-                {/* Left Column: Itinerary Timeline List (5 cols) */}
+                {/* Left timeline */}
                 <div className="lg:col-span-5 space-y-10 max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin">
                   {itinerary.map((day) => {
-                    // Calculate day cost total
                     const cleanCosts = day.activities
                       .map(a => parseFloat(a.cost.replace(/[^0-9.]/g, '')))
                       .filter(val => !isNaN(val));
@@ -433,36 +558,33 @@ export default function Dashboard() {
 
                     return (
                       <div key={day.day} className="space-y-6">
-                        {/* Day header with underline */}
+                        {/* Day header */}
                         <div className="border-b border-brand-gold/20 pb-2 mb-4">
                           <h4 className="text-[11px] font-bold font-mono tracking-[0.25em] text-brand-gold uppercase">
                             Day {day.day} / {day.theme}
                           </h4>
                         </div>
 
-                        {/* Activities schedule row list */}
+                        {/* Activities list */}
                         <div className="space-y-6 pl-2">
                           {day.activities.map((act, aIdx) => (
                             <div key={aIdx} className="flex gap-4 items-start">
-                              {/* Gold Time indicator */}
                               <span className="text-xs font-bold font-mono text-brand-gold text-right w-12 pt-0.5 shrink-0">
                                 {act.timeOfDay}
                               </span>
 
-                              {/* Activity details */}
                               <div className="space-y-1">
                                 <h5 className="font-serif text-sm font-normal text-white">{act.name}</h5>
                                 <span className="text-[10px] text-gray-400 block">
                                   {act.duration} · {act.travelTime || '0 min'} · {act.cost || 'Free'}
                                 </span>
-                               <p className="text-gray-400 text-xs leading-relaxed pt-1">{act.description}</p>
+                                <p className="text-gray-400 text-xs leading-relaxed pt-1">{act.description}</p>
                               </div>
                             </div>
                           ))}
                         </div>
 
-
-                        {/* Estimated Day Cost total */}
+                        {/* Day totals */}
                         <div className="pl-14 pt-2">
                           <span className="text-xs font-bold font-mono text-brand-gold uppercase tracking-wider">
                             Estimated total · {formattedTotal}
@@ -473,7 +595,7 @@ export default function Dashboard() {
                   })}
                 </div>
 
-                {/* Right Column: Map container (7 cols) */}
+                {/* Right map */}
                 <div className="lg:col-span-7 h-[60vh] rounded-2xl overflow-hidden border border-white/5">
                   <MapContainer 
                     markers={allMarkers} 
@@ -484,13 +606,13 @@ export default function Dashboard() {
               </motion.div>
             )}
 
-            {/* Map tab matching Image 1 */}
+            {/* Map tab */}
             {activeTab === 'map' && (
               <motion.div 
                 key="map"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 className="w-full h-[60vh] rounded-2xl overflow-hidden border border-white/5"
               >
                 <MapContainer 
@@ -504,7 +626,7 @@ export default function Dashboard() {
           </AnimatePresence>
         </div>
 
-        {/* Global Practical specs block */}
+        {/* Practical specs block */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-white/5 pt-8">
           <div className="p-4 rounded-xl bg-slate-900/20 border border-white/5">
             <span className="text-gray-500 block text-[9px] uppercase font-mono tracking-wider">Language</span>
@@ -526,7 +648,7 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Story mode Full-screen Frosted Overlay Modal */}
+      {/* Story Mode Full-screen overlay */}
       <AnimatePresence>
         {showStoryModal && (
           <motion.div 
@@ -541,7 +663,6 @@ export default function Dashboard() {
               exit={{ scale: 0.95, y: 15 }}
               className="w-full max-w-3xl glass-panel border border-brand-gold/10 p-8 md:p-12 rounded-3xl relative overflow-y-auto max-h-[85vh] scrollbar-thin"
             >
-              {/* Close Button */}
               <button 
                 onClick={() => { stopStory(); setShowStoryModal(false); }}
                 className="absolute top-6 right-6 p-1.5 rounded-full border border-white/10 hover:border-brand-gold/40 text-gray-400 hover:text-white cursor-pointer transition-colors"
@@ -557,11 +678,10 @@ export default function Dashboard() {
                     <h3 className="text-2xl md:text-3xl font-serif font-normal text-white mt-1 leading-snug">{culturalStory.title}</h3>
                   </div>
 
-                  {/* Play console */}
                   <div className="flex items-center space-x-2 shrink-0">
                     <button
                       onClick={speakStory}
-                      className="px-4 py-2 rounded-sm bg-brand-gold hover:bg-brand-gold-hover text-gray-950 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300"
+                      className="px-4 py-2 rounded-sm bg-brand-gold hover:bg-brand-gold-hover text-gray-950 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 cursor-pointer"
                     >
                       {isSpeaking ? (
                         <>
@@ -578,7 +698,7 @@ export default function Dashboard() {
                     {(isSpeaking || isPaused) && (
                       <button
                         onClick={stopStory}
-                        className="px-3 py-2 rounded-sm bg-rose-950/40 border border-rose-900 hover:bg-rose-900 text-rose-300 text-xs font-bold transition-all duration-300"
+                        className="px-3 py-2 rounded-sm bg-rose-950/40 border border-rose-900 hover:bg-rose-900 text-rose-300 text-xs font-bold transition-all duration-300 cursor-pointer"
                       >
                         Stop
                       </button>
@@ -586,7 +706,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Narrative with dropcaps */}
                 <div className="text-gray-200 leading-relaxed font-serif text-base md:text-lg space-y-6 pt-2 select-text">
                   {culturalStory.story.split('\n\n').map((para, pIdx) => {
                     if (pIdx === 0 && para.length > 0) {
@@ -603,7 +722,6 @@ export default function Dashboard() {
                   })}
                 </div>
 
-                {/* Additional Context block */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-6 text-xs text-gray-400 font-sans">
                   <div className="p-4 rounded-xl bg-slate-950/40 border border-white/5">
                     <h4 className="font-bold text-gray-300 mb-1.5 uppercase font-mono tracking-wider text-[9px]">Cultural Value</h4>

@@ -2,7 +2,24 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer as LeafletMap, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { GoogleMap, useJsApiLoader, Marker as GoogleMarker, InfoWindow, Polyline as GooglePolyline } from '@react-google-maps/api';
 import L from 'leaflet';
-import { MapPin, Info, Navigation, AlertTriangle } from 'lucide-react';
+import { MapPin, AlertTriangle } from 'lucide-react';
+
+interface MarkerData {
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  type: string;
+  cost?: string;
+  duration?: string;
+  whySpecial?: string;
+}
+
+interface MapContainerProps {
+  markers?: MarkerData[];
+  route?: number[][];
+  center?: number[];
+}
 
 // Custom yellow dot markers matching the mockup
 const createLeafletIcon = () => {
@@ -21,19 +38,18 @@ const createLeafletIcon = () => {
   });
 };
 
-
 // Helper component in Leaflet to auto-recenter the map when center changes
-function RecenterMap({ center }) {
+function RecenterMap({ center }: { center: number[] }) {
   const map = useMap();
   useEffect(() => {
     if (center && center[0] && center[1]) {
-      map.setView(center, map.getZoom());
+      map.setView(center as L.LatLngExpression, map.getZoom());
     }
   }, [center, map]);
   return null;
 }
 
-export default function MapContainer({ markers = [], route = [], center = [0, 0] }) {
+export default function MapContainer({ markers = [], route = [], center = [0, 0] }: MapContainerProps) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const hasGoogleKey = !!apiKey;
 
@@ -41,23 +57,23 @@ export default function MapContainer({ markers = [], route = [], center = [0, 0]
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
-    libraries: ['places']
+    libraries: ['places'] as any
   });
 
-  const [activeGoogleMarker, setActiveGoogleMarker] = useState(null);
+  const [activeGoogleMarker, setActiveGoogleMarker] = useState<MarkerData | null>(null);
 
   // Normalize center coordinates for Google Maps vs Leaflet
   const googleCenter = useMemo(() => {
-    return { lat: parseFloat(center[0]), lng: parseFloat(center[1]) };
+    return { lat: parseFloat(center[0].toString()), lng: parseFloat(center[1].toString()) };
   }, [center]);
 
   const googleRoutePath = useMemo(() => {
-    return route.map(coord => ({ lat: parseFloat(coord[0]), lng: parseFloat(coord[1]) }));
+    return route.map(coord => ({ lat: parseFloat(coord[0].toString()), lng: parseFloat(coord[1].toString()) }));
   }, [route]);
 
   // Leaflet fallback route path format
   const leafletRoutePath = useMemo(() => {
-    return route.map(coord => [parseFloat(coord[0]), parseFloat(coord[1])]);
+    return route.map(coord => [parseFloat(coord[0].toString()), parseFloat(coord[1].toString())]) as L.LatLngExpression[];
   }, [route]);
 
   // Handle fallback to Leaflet if google maps key is not provided or load fails
@@ -70,7 +86,7 @@ export default function MapContainer({ markers = [], route = [], center = [0, 0]
             <span>Running in open-source Leaflet map fallback (Offline API Mode)</span>
           </div>
         )}
-        <LeafletMap center={center} zoom={13} scrollWheelZoom={true}>
+        <LeafletMap center={center as L.LatLngExpression} zoom={13} scrollWheelZoom={true}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -78,7 +94,7 @@ export default function MapContainer({ markers = [], route = [], center = [0, 0]
           {markers.map((marker, idx) => (
             <Marker
               key={idx}
-              position={[parseFloat(marker.latitude), parseFloat(marker.longitude)]}
+              position={[parseFloat(marker.latitude.toString()), parseFloat(marker.longitude.toString())]}
               icon={createLeafletIcon()}
             >
               <Popup>
@@ -132,7 +148,7 @@ export default function MapContainer({ markers = [], route = [], center = [0, 0]
           }}
         >
           {markers.map((marker, idx) => {
-            const position = { lat: parseFloat(marker.latitude), lng: parseFloat(marker.longitude) };
+            const position = { lat: parseFloat(marker.latitude.toString()), lng: parseFloat(marker.longitude.toString()) };
             return (
               <GoogleMarker
                 key={idx}
@@ -145,7 +161,7 @@ export default function MapContainer({ markers = [], route = [], center = [0, 0]
 
           {activeGoogleMarker && (
             <InfoWindow
-              position={{ lat: parseFloat(activeGoogleMarker.latitude), lng: parseFloat(activeGoogleMarker.longitude) }}
+              position={{ lat: parseFloat(activeGoogleMarker.latitude.toString()), lng: parseFloat(activeGoogleMarker.longitude.toString()) }}
               onCloseClick={() => setActiveGoogleMarker(null)}
             >
               <div className="p-2 max-w-[240px] text-gray-950 font-sans">
@@ -171,14 +187,13 @@ export default function MapContainer({ markers = [], route = [], center = [0, 0]
                 strokeOpacity: 0.8,
                 strokeWeight: 4,
                 icons: [{
-                  icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 },
+                  icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 } as any,
                   offset: '0',
                   repeat: '20px'
                 }]
               }}
             />
           )}
-
         </GoogleMap>
       </div>
     );
