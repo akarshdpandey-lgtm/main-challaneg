@@ -1,15 +1,5 @@
 {
   "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/client/dist/$1"
-    }
-  ],
   "builds": [
     {
       "src": "server/server.js",
@@ -21,6 +11,19 @@
       "config": {
         "distDir": "dist"
       }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server/server.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "client/index.html"
     }
   ]
 }
